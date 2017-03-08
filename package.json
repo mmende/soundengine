@@ -1,6 +1,6 @@
 {
   "name": "soundengine",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A C++ node.js module that allows manipulating audio streams from/to soundcards and work with the fft of the signal etc.",
   "main": "build/Release/soundengine.node",
   "types": "typings/soundengine.d.ts",
@@ -13,5 +13,21 @@
   "license": "MIT",
   "dependencies": {
     "nan": "^2.5.1"
+  },
+  "keywords": [
+    "sound",
+    "soundcard",
+    "audio",
+    "portaudio",
+    "dsp",
+    "wav",
+    "fft"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mmende/soundengine"
+  },
+  "bugs": {
+    "url": "https://github.com/mmende/soundengine/issues"
   }
 }
