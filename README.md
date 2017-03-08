@@ -43,7 +43,7 @@ $ npm i soundengine
 
 ## Basic usage example
 
-```
+```javascript
 const soundengine = require('soundengine')
 
 // Start live transmission from the default input device to the default output device at 22kHz
@@ -76,7 +76,7 @@ process.stdin.resume()
 
 To list the available devices
 
-```
+```javascript
 const soundengine = require('soundengine')
 var devices = soundengine.getDevices()
 ```
