@@ -1,0 +1,17 @@
+{
+  "name": "soundengine",
+  "version": "1.0.0",
+  "description": "A C++ node.js module that allows manipulating audio streams from/to soundcards and work with the fft of the signal etc.",
+  "main": "build/Release/soundengine.node",
+  "types": "typings/soundengine.d.ts",
+  "gypfile": true,
+  "scripts": {
+    "install": "node-gyp rebuild",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Martin Mende",
+  "license": "MIT",
+  "dependencies": {
+    "nan": "^2.5.1"
+  }
+}
