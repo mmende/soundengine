@@ -1,1 +1,0 @@
-cmd_Release/obj.target/soundengine.node := g++ -shared -pthread -rdynamic -m64  -Wl,-soname=soundengine.node -o Release/obj.target/soundengine.node -Wl,--start-group Release/obj.target/soundengine/src/SoundEngine.o Release/obj.target/soundengine/src/WindowFunction.o -Wl,--end-group -L/usr/local/lib -lportaudio -lasound -lm -lpthread -lfftw3

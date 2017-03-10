@@ -1,1 +1,1 @@
-cmd_Release/soundengine.node := rm -rf "Release/soundengine.node" && cp -af "Release/obj.target/soundengine.node" "Release/soundengine.node"
+cmd_Release/soundengine.node := c++ -bundle -stdlib=libc++ -undefined dynamic_lookup -Wl,-search_paths_first -mmacosx-version-min=10.7 -arch x86_64 -L./Release  -o Release/soundengine.node Release/obj.target/soundengine/src/SoundEngine.o Release/obj.target/soundengine/src/WindowFunction.o -lportaudio -L/usr/local/Cellar/fftw/3.3.4_1/lib -lfftw3 -framework AudioToolbox -framework AudioUnit -framework Carbon

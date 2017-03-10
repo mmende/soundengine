@@ -23,8 +23,11 @@
 							'<!@(pkg-config fftw3 --cflags-only-I)'
 						],
 						"libraries": [
-							'<!@(pkg-config portaudio-2.0 --libs)',
-							'<!@(pkg-config fftw3 --libs)'
+							'<!@(pkg-config portaudio-2.0 --libs-only-l)',
+							'<!@(pkg-config fftw3 --libs)',
+							'/Library/Frameworks/AudioToolbox.framework',
+							'/Library/Frameworks/AudioUnit.framework',
+							'/Library/Frameworks/Carbon.framework'
 						],
 					}
 				],
