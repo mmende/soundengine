@@ -81,7 +81,7 @@ Sound::Engine::Engine() {
 
 	uv_timer_init(uv_default_loop(), &processing_timer);
 	processing_timer.data = this;
-	uv_timer_start(&processing_timer, _processing, 0, 10);
+	uv_timer_start(&processing_timer, _processing, 0, PROCESSING_INTERVAL);
 
 	uv_timer_init(uv_default_loop(), &beep_timer);
 	beep_timer.data = this;
@@ -156,6 +156,8 @@ void Sound::Engine::Init(Handle<Object> target) {
 
 	Nan::SetPrototypeMethod(tpl, "getOptions", GetOptions);
 	Nan::SetPrototypeMethod(tpl, "setOptions", SetOptions);
+
+	Nan::SetPrototypeMethod(tpl, "synchronize", Synchronize);
 
 	constructor().Reset(Nan::GetFunction(tpl).ToLocalChecked());
 
@@ -690,6 +692,27 @@ void Sound::Engine::SetOptions(const Nan::FunctionCallbackInfo<v8::Value>& info)
 	engine->_setOptions(opts);
 }
 
+void Sound::Engine::Synchronize(const Nan::FunctionCallbackInfo<Value>& info) {
+	Nan::HandleScope scope;
+	Engine* engine = Nan::ObjectWrap::Unwrap<Engine>(info.Holder());
+
+	uv_mutex_lock(&(engine->inBufferCacheMutex));
+		for (vector<float*>::iterator it = engine->inBufferCache.begin() ; it != engine->inBufferCache.end(); ++it) {
+			float* buffer = *it;
+			delete[] buffer;
+		}
+		engine->inBufferCache.clear();
+	uv_mutex_unlock(&(engine->inBufferCacheMutex));
+
+	uv_mutex_lock(&(engine->outBufferCacheMutex));
+		for (vector<float*>::iterator it = engine->outBufferCache.begin() ; it != engine->outBufferCache.end(); ++it) {
+			float* buffer = *it;
+			delete[] buffer;
+		}
+		engine->outBufferCache.clear();
+	uv_mutex_unlock(&(engine->outBufferCacheMutex));
+}
+
 
 
 void Sound::Engine::_processing(uv_timer_t *handle) {
@@ -920,7 +943,7 @@ void Sound::Engine::_configureStream() {
 void Sound::Engine::_startStream() {
 	PaError paErr = Pa_IsStreamActive(stream);
 	if (paErr == 1) {
-		printf("Stream already active...\n");
+		//printf("Stream already active...\n");
 		return;
 	}
 
@@ -931,7 +954,7 @@ void Sound::Engine::_startStream() {
 	}
 
 	// Restart the processing timer
-	uv_timer_start(&processing_timer, _processing, 0, 10);
+	uv_timer_start(&processing_timer, _processing, 0, PROCESSING_INTERVAL);
 }
 
 void Sound::Engine::_stopStream() {
@@ -940,7 +963,7 @@ void Sound::Engine::_stopStream() {
 
 	PaError paErr = Pa_IsStreamStopped(stream);
 	if (paErr == 1) {
-		printf("Stream already stopped...\n");
+		//printf("Stream already stopped...\n");
 		return;
 	}
 
@@ -1043,7 +1066,7 @@ void Sound::Engine::_saveRecording(string file) {
 	int byteRate = sampleRate * (int)blockAlign;
 
 	memcpy(_header.RIFF, "RIFF", 4);
-	_header.ChunkSize = dataSize - 8;
+	_header.ChunkSize = dataSize - sizeof(WaveHeader);
 	memcpy(_header.WAVE, "WAVE", 4);
 	memcpy(_header.fmt, "fmt ", 4);
 	_header.Subchunk1Size = 16;

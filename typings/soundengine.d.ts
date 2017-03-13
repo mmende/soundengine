@@ -59,6 +59,8 @@ declare namespace soundengine {
 
 		getOptions(): engineOptions
 		setOptions(options?: engineOptions)
+
+		synchronize()
 	}
 
 	export interface Device {

@@ -126,6 +126,7 @@ maxOutputChannels | number    | The maximum supported output channels for this d
 * `setMute(mute?: boolean)` - Mutes or unmutes the output.
 * `getOptions(): engineOptions` - Returns the current engine options.
 * `setOptions(options?: engineOptions)` - Sets the engine options.
+* `synchronize()` - Clears the internal buffer queues. If there for example is a large delay between the input and the output after initializing a new engine, calling `synchronize` could potentially minimize this delay.
 
 ### Engine options
 

@@ -5,6 +5,7 @@
 #define BEEP_DETAULT_DURATION 200
 #define BEEP_DETAULT_FREQUENCY 700
 #define BEEP_DETAULT_LEVEL 1.0
+#define PROCESSING_INTERVAL 1
 
 #include <v8.h>
 #include <nan.h>
@@ -98,6 +99,7 @@ namespace Sound {
 		static NAN_METHOD(SetMute);
 		static NAN_METHOD(GetOptions);
 		static NAN_METHOD(SetOptions);
+		static NAN_METHOD(Synchronize);
 
 		static inline Nan::Persistent<Function> & constructor() {
 			static Nan::Persistent<Function> construct;
