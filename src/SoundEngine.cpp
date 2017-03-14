@@ -1021,10 +1021,12 @@ void Sound::Engine::_loadWave(string file) {
 		// Fille the playback cache buffer
 		float* playbackBuffer = new float[bufferSize];
 		recordingBufferCache.push_back(playbackBuffer);
+		int nextSampleIdx;
 		for (int i = 0, j = 0; i < samplesCount; ++i) {
 			float sample = data[i];
 			playbackBuffer[j] = sample;
 			++j;
+			nextSampleIdx = j;
 			if (j >= bufferSize) {
 				j = 0;
 				playbackBuffer = new float[bufferSize];
@@ -1032,6 +1034,12 @@ void Sound::Engine::_loadWave(string file) {
 			}
 		}
 		waveFile.close();
+
+		// When there are not enough samples to fill the last playback buffer fill it with zeros
+		while (nextSampleIdx < bufferSize) {
+			playbackBuffer[nextSampleIdx] = 0.0;
+			++nextSampleIdx;
+		}
 
 		_emit("recording_loaded", 0, {});
 	}
@@ -1042,6 +1050,7 @@ void Sound::Engine::_deleteRecording() {
 		delete[] recordingBufferCache.back();
 		recordingBufferCache.pop_back();
 	}
+	_emit("recording_deleted", 0, {});
 }
 
 void Sound::Engine::_saveRecording(string file) {
@@ -1099,6 +1108,8 @@ void Sound::Engine::_saveRecording(string file) {
 		delete[] chunkData;
 	}
 	fclose(fp);
+
+	_emit("recording_saved", 0, {});
 }
 
 void Sound::Engine::_addListener(
