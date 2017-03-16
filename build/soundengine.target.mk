@@ -51,6 +51,7 @@ INCS_Debug := \
 	-I/Users/martinmende/.node-gyp/5.9.1/deps/v8/include \
 	-I$(srcdir)/node_modules/nan \
 	-I/Users/martinmende/Documents/development/soundengine/src \
+	-I/Users/martinmende/Documents/development/soundengine/third_party/readerwriterqueue \
 	-I$(srcdir)/-I/usr/local/Cellar/portaudio/19.6.0/include \
 	-I$(srcdir)/-I/usr/local/Cellar/fftw/3.3.4_1/include
 
@@ -101,6 +102,7 @@ INCS_Release := \
 	-I/Users/martinmende/.node-gyp/5.9.1/deps/v8/include \
 	-I$(srcdir)/node_modules/nan \
 	-I/Users/martinmende/Documents/development/soundengine/src \
+	-I/Users/martinmende/Documents/development/soundengine/third_party/readerwriterqueue \
 	-I$(srcdir)/-I/usr/local/Cellar/portaudio/19.6.0/include \
 	-I$(srcdir)/-I/usr/local/Cellar/fftw/3.3.4_1/include
 

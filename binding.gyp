@@ -4,11 +4,13 @@
 			"target_name": "soundengine",
 			"sources": [
 				"src/SoundEngine.cpp",
-				"src/WindowFunction.cpp"
+				"src/WindowFunction.cpp",
+				"third_party/readerwriterqueue/readerwriterqueue.h"
 			],
 			"include_dirs": [
 				"<!(node -e \"require('nan')\")",
-				"<(module_root_dir)/src"
+				"<(module_root_dir)/src",
+				"<(module_root_dir)/third_party/readerwriterqueue"
 			],
 			'conditions' : [
 				[

@@ -51,29 +51,11 @@ Sound::Engine::Engine() {
 	fftWindowFunctionType = Square;
 	fftWindowFunction = new WindowFunction(fftWindowFunctionType, fftWindowSize);
 
-	// Create the buffer caches
-	inBufferCache = vector<float*>();
-	outBufferCache = vector<float*>();
+	// Init the queues with at least 100 elements
+	inBufferQueue = new moodycamel::ReaderWriterQueue<float*>(100);
+	outBufferQueue = new moodycamel::ReaderWriterQueue<float*>(100);
+
 	recordingBufferCache = vector<float*>();
-
-	int uvErr;
-	uvErr = uv_mutex_init(&inBufferCacheMutex);
-	if (uvErr != 0) {
-		Nan::ThrowError("Could not create inBufferCache mutex.");
-		return;
-	}
-	uvErr = uv_mutex_init(&outBufferCacheMutex);
-	if (uvErr != 0) {
-		Nan::ThrowError("Could not create outBufferCache mutex.");
-		return;
-	}
-
-	// Start the looping thread that reads and writes the audio buffers
-	uvErr = uv_mutex_init(&streamMutex);
-	if (uvErr != 0) {
-		Nan::ThrowError("Could not create streaming mutex.");
-		return;
-	}
 
 	// Configure PortAudio
 	stream = NULL;
@@ -292,7 +274,6 @@ void Sound::Engine::EventNames(const Nan::FunctionCallbackInfo<v8::Value>& info)
 	// Create an array for the event names
 	Local<Array> eventNames = Nan::New<Array>(engine->listeners.size());
 	int i = 0;
-	//for (map<string, vector<Nan::Persistent<Function>*>*>::iterator it = engine->listeners.begin(); it != engine->listeners.end(); ++it, ++i) {
 	for (map<string, vector<Listener*>*>::iterator it = engine->listeners.begin(); it != engine->listeners.end(); ++it, ++i) {
 		string eventName = it->first;
 		eventNames->Set(i, Nan::New<String>(eventName).ToLocalChecked());
@@ -315,10 +296,8 @@ void Sound::Engine::ListenerCount(const Nan::FunctionCallbackInfo<v8::Value>& in
 	int listenerCount = 0;
 
 	// Find all listeners for the eventName
-	//map<string, vector<Nan::Persistent<Function>*>*>::iterator it = engine->listeners.find(eventName);
 	map<string, vector<Listener*>*>::iterator it = engine->listeners.find(eventName);
 	if (it != engine->listeners.end()) {
-		//vector<Nan::Persistent<Function>*>* eventListeners = it->second;
 		vector<Listener*>* eventListeners = it->second;
 		listenerCount = eventListeners->size();
 	}
@@ -696,21 +675,8 @@ void Sound::Engine::Synchronize(const Nan::FunctionCallbackInfo<Value>& info) {
 	Nan::HandleScope scope;
 	Engine* engine = Nan::ObjectWrap::Unwrap<Engine>(info.Holder());
 
-	uv_mutex_lock(&(engine->inBufferCacheMutex));
-		for (vector<float*>::iterator it = engine->inBufferCache.begin() ; it != engine->inBufferCache.end(); ++it) {
-			float* buffer = *it;
-			delete[] buffer;
-		}
-		engine->inBufferCache.clear();
-	uv_mutex_unlock(&(engine->inBufferCacheMutex));
-
-	uv_mutex_lock(&(engine->outBufferCacheMutex));
-		for (vector<float*>::iterator it = engine->outBufferCache.begin() ; it != engine->outBufferCache.end(); ++it) {
-			float* buffer = *it;
-			delete[] buffer;
-		}
-		engine->outBufferCache.clear();
-	uv_mutex_unlock(&(engine->outBufferCacheMutex));
+	while(engine->inBufferQueue->pop());
+	while(engine->outBufferQueue->pop());
 }
 
 
@@ -719,19 +685,13 @@ void Sound::Engine::_processing(uv_timer_t *handle) {
 	Engine* engine = (Engine*)(handle->data);
 	Nan::HandleScope scope;
 
-	uv_mutex_lock(&(engine->inBufferCacheMutex));
 	float* inputBuffer;
+
 	// Check if a inputBuffer is available
-	if (engine->inBufferCache.size() > 0) {
-		// Get the inputBuffer and remove the reference from the vector.
-		inputBuffer = engine->inBufferCache.front();
-		engine->inBufferCache.erase(engine->inBufferCache.begin());
-	} else {
-		// No data to process...
-		uv_mutex_unlock(&(engine->inBufferCacheMutex));
+	bool hasInputBuffer = engine->inBufferQueue->try_dequeue(inputBuffer);
+	if (hasInputBuffer == false) {
 		return;
 	}
-	uv_mutex_unlock(&(engine->inBufferCacheMutex));
 
 	// Overwrite with playback buffer when isPlaying is active
 	if (engine->isPlaying) {
@@ -845,10 +805,8 @@ void Sound::Engine::_processing(uv_timer_t *handle) {
 		}
 	}
 
-	// Add the processed inputBuffer to the outBufferCache
-	uv_mutex_lock(&(engine->outBufferCacheMutex));
-	engine->outBufferCache.push_back(inputBuffer);
-	uv_mutex_unlock(&(engine->outBufferCacheMutex));
+	// Enqueue the processed inputBuffer to the outBufferQueue
+	engine->outBufferQueue->enqueue(inputBuffer);
 }
 
 int Sound::Engine::_streamCallback(
@@ -859,33 +817,27 @@ int Sound::Engine::_streamCallback(
 			void *userData)
 {
 	Engine* engine = (Engine*)(userData);
-	
-	int streamLocked = uv_mutex_trylock(&(engine->streamMutex));
-	if(streamLocked != 0) return 0;
 
-	int samplesCount = engine->bufferSize;// * engine->inputChannels;
+	int samplesCount = engine->bufferSize;
 
 	float* inputBuffer = (float*)input;
 	float* outputBuffer = (float*)output;
 
-	// Copy the inputBuffer onto the cache
-	uv_mutex_lock(&(engine->inBufferCacheMutex));
+	// Enqueue the new inputBuffer
 	float* inCopy = new float[samplesCount];
 	memcpy(inCopy, inputBuffer, sizeof(float) * samplesCount);
-	engine->inBufferCache.push_back(inCopy);
-	uv_mutex_unlock(&(engine->inBufferCacheMutex));
+	engine->inBufferQueue->enqueue(inCopy);
 
-	// Get an outputBuffer from the cache
-	uv_mutex_lock(&(engine->outBufferCacheMutex));
-	if (engine->outBufferCache.size() > 0) {
-		float* outCopy = engine->outBufferCache.front();
-		memcpy(outputBuffer, outCopy, sizeof(float) * samplesCount);
-		delete outCopy;
-		engine->outBufferCache.erase(engine->outBufferCache.begin());
+	// Dequeue an outputBuffer from the queue if available
+	float* outCopy;
+	bool hasOutputBuffer = engine->outBufferQueue->try_dequeue(outCopy);
+	if (hasOutputBuffer == false) {
+		printf("Underflow detected...\n");
+		return 0;
 	}
-	uv_mutex_unlock(&(engine->outBufferCacheMutex));
-
-	uv_mutex_unlock(&(engine->streamMutex));
+	for (int i = 0; i < engine->bufferSize; ++i)
+		outputBuffer[i] = outCopy[i];
+	delete[] outCopy;
 	return 0;
 }
 
@@ -973,15 +925,9 @@ void Sound::Engine::_stopStream() {
 		return;
 	}
 
-	// Clear caches
-	while (!inBufferCache.empty()) {
-		delete inBufferCache.back();
-		inBufferCache.pop_back();
-	}
-	while (!outBufferCache.empty()) {
-		delete outBufferCache.back();
-		outBufferCache.pop_back();
-	}
+	// Clear queues
+	while(inBufferQueue->pop());
+	while(outBufferQueue->pop());
 }
 
 void Sound::Engine::_destroyStream() {
@@ -1021,7 +967,7 @@ void Sound::Engine::_loadWave(string file) {
 		// Fille the playback cache buffer
 		float* playbackBuffer = new float[bufferSize];
 		recordingBufferCache.push_back(playbackBuffer);
-		int nextSampleIdx;
+		int nextSampleIdx = 0;
 		for (int i = 0, j = 0; i < samplesCount; ++i) {
 			float sample = data[i];
 			playbackBuffer[j] = sample;
@@ -1232,11 +1178,9 @@ void Sound::Engine::_setOptions(Nan::Persistent<Object>* opts) {
 	opts->Reset();
 	delete opts;
 
-	uv_mutex_lock(&streamMutex);
 	_stopStream();
 	_configureStream();
 	_startStream();
-	uv_mutex_unlock(&streamMutex);
 }
 
 

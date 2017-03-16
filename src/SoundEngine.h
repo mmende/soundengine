@@ -18,6 +18,7 @@
 #include <portaudio.h>
 #include <fftw3.h>
 
+#include "readerwriterqueue.h"
 #include "WindowFunction.h"
 
 using namespace std;
@@ -143,16 +144,12 @@ namespace Sound {
 		int outputDevice;
 
 		// Holds the unprocessed input buffers comming from the soundcard
-		vector<float*> inBufferCache;
+		moodycamel::ReaderWriterQueue<float*>* inBufferQueue;
 		// Holds the processed output buffers that go out to the soundcard
-		vector<float*> outBufferCache;
-		// Used to prevent simultanious usage of the in/out cache buffers from the stream callback and the processing interval
-		uv_mutex_t inBufferCacheMutex;
-		uv_mutex_t outBufferCacheMutex;
+		moodycamel::ReaderWriterQueue<float*>* outBufferQueue;
+
 		// The actual processing interval timer
 		uv_timer_t processing_timer;
-		// Used to prevent using the buffers in the PortAudio callback while e.g. reconfiguring the stream
-		uv_mutex_t streamMutex;
 		// The volume coefficient
 		double volume = 1.0;
 		bool isMuted = false;
