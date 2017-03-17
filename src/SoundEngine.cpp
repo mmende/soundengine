@@ -45,6 +45,8 @@ Sound::Engine::Engine() {
 	outputChannels = 1;
 	inputDevice = Pa_GetDefaultInputDevice();
 	outputDevice = Pa_GetDefaultOutputDevice();
+	inputLatency = -1.0;
+	outputLatency = -1.0;
 
 	// Set default options for fft
 	fftWindowSize = 1024;
@@ -637,6 +639,11 @@ void Sound::Engine::GetOptions(const Nan::FunctionCallbackInfo<v8::Value>& info)
 	Nan::Set(options, Nan::New<String>("inputDevice").ToLocalChecked(), Nan::New<Integer>(engine->inputDevice));
 	Nan::Set(options, Nan::New<String>("outputDevice").ToLocalChecked(), Nan::New<Integer>(engine->outputDevice));
 
+	double _inputLatency = engine->inputLatency < 0 ? Pa_GetDeviceInfo(engine->inputDevice)->defaultHighInputLatency : engine->inputLatency;
+	Nan::Set(options, Nan::New<String>("inputLatency").ToLocalChecked(), Nan::New<Number>(_inputLatency));
+	double _outputLatency = engine->outputLatency < 0 ? Pa_GetDeviceInfo(engine->outputDevice)->defaultHighInputLatency : engine->outputLatency;
+	Nan::Set(options, Nan::New<String>("outputLatency").ToLocalChecked(), Nan::New<Number>(_outputLatency));
+
 	Nan::Set(options, Nan::New<String>("fftWindowSize").ToLocalChecked(), Nan::New<Integer>(engine->fftWindowSize));
 	Nan::Set(options, Nan::New<String>("fftOverlapSize").ToLocalChecked(), Nan::New<Number>(engine->fftOverlapSize));
 
@@ -867,12 +874,12 @@ void Sound::Engine::_configureStream() {
 	inputParameters.device = inputDevice;
 	inputParameters.channelCount = inputChannels;
 	inputParameters.sampleFormat = paFloat32;
-	inputParameters.suggestedLatency = Pa_GetDeviceInfo(inputDevice)->defaultLowInputLatency;
+	inputParameters.suggestedLatency = inputLatency < 0 ? Pa_GetDeviceInfo(inputDevice)->defaultHighInputLatency : inputLatency;
 	inputParameters.hostApiSpecificStreamInfo = NULL;
 	outputParameters.device = outputDevice;
 	outputParameters.channelCount = outputChannels;
 	outputParameters.sampleFormat = paFloat32;
-	outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputDevice)->defaultHighOutputLatency;
+	outputParameters.suggestedLatency = outputLatency < 0 ? Pa_GetDeviceInfo(outputDevice)->defaultHighOutputLatency : outputLatency;
 	outputParameters.hostApiSpecificStreamInfo = NULL;
 
 	// Open the stream with the specified parameters
@@ -1136,6 +1143,16 @@ void Sound::Engine::_setOptions(Nan::Persistent<Object>* opts) {
 	if (Nan::HasOwnProperty(options, Nan::New<String>("outputDevice").ToLocalChecked()).FromMaybe(false)) {
 		Local<Integer> _outputDevice = Nan::To<Integer>(Nan::Get(options, Nan::New<String>("outputDevice").ToLocalChecked()).ToLocalChecked()).ToLocalChecked();
 		outputDevice = (int)_outputDevice->Int32Value();
+	}
+
+	if (Nan::HasOwnProperty(options, Nan::New<String>("inputLatency").ToLocalChecked()).FromMaybe(false)) {
+		Local<Number> _inputLatency = Nan::To<Number>(Nan::Get(options, Nan::New<String>("inputLatency").ToLocalChecked()).ToLocalChecked()).ToLocalChecked();
+		inputLatency = (float)_inputLatency->NumberValue();
+	}
+
+	if (Nan::HasOwnProperty(options, Nan::New<String>("outputLatency").ToLocalChecked()).FromMaybe(false)) {
+		Local<Number> _outputLatency = Nan::To<Number>(Nan::Get(options, Nan::New<String>("outputLatency").ToLocalChecked()).ToLocalChecked()).ToLocalChecked();
+		outputLatency = (float)_outputLatency->NumberValue();
 	}
 
 	if (Nan::HasOwnProperty(options, Nan::New<String>("fftWindowSize").ToLocalChecked()).FromMaybe(false)) {

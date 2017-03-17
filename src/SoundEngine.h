@@ -142,6 +142,8 @@ namespace Sound {
 		int outputChannels;
 		int inputDevice;
 		int outputDevice;
+		double inputLatency;
+		double outputLatency;
 
 		// Holds the unprocessed input buffers comming from the soundcard
 		moodycamel::ReaderWriterQueue<float*>* inBufferQueue;

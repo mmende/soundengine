@@ -85,34 +85,31 @@ var devices = soundengine.getDevices()
 
 ### Engine options
 
-Property          | Type      | Description
-------------------|-----------|-------------------------------------------------------
-id                | number    | The device id to use in the engine options.
-name              | string    | The device name.
-defaultSampleRate | number    | The default sample rate of the device.
-maxInputChannels  | number    | The maximum supported input channels for this device.
-maxOutputChannels | number    | The maximum supported output channels for this device.
+Property                 | Type      | Description
+-------------------------|-----------|-------------------------------------------------------
+id                       | number    | The device id to use in the engine options.
+name                     | string    | The device name.
+defaultSampleRate        | number    | The default sample rate of the device.
+maxInputChannels         | number    | The maximum supported input channels for this device.
+maxOutputChannels        | number    | The maximum supported output channels for this device.
+defaultLowInputLatency   | number    | [See PortAudio docs](http://www.portaudio.com/docs/latency.html)
+defaultLowOutputLatency  | number    | [See PortAudio docs](http://www.portaudio.com/docs/latency.html)
+defaultHighInputLatency  | number    | [See PortAudio docs](http://www.portaudio.com/docs/latency.html)
+defaultHighOutputLatency | number    | [See PortAudio docs](http://www.portaudio.com/docs/latency.html)
 
 ### Engine methods
 
-* `addListener(eventName: string, listener: Function)` - Alias for `on`.
-* `eventNames(): string[]` - Lists all available event names.
-* `listenerCount(eventName: string): number` - Returns the number of `listeners` for the event named `eventName`.
-* `on(eventName: string, listener: Function)` - Adds the `listener` function to the end of the listeners array for the event named `eventName`.
-* `once(eventName: string, listener: Function)` - Adds a one time `listener` function for the event named `eventName`.
-* `prependListener(eventName: string, listener: Function)` - Adds the `listener` function to the beginning of the listeners array for the event named `eventName`.
-* `prependOnceListener(eventName: string, listener: Function)` - Adds a one time `listener` function for the event named `eventName` to the beginning of the listeners array. 
-* `removeAllListeners(eventName?: string)` - Removes all listeners, or those of the specified `eventName`.
-* `removeListener(eventName: string, listener: Function)` - Removes the specified `listener` from the listener array for the event named `eventName`.
-* `loadRecording(file: string)` - Loads a wave `file` that is then playable.
+The engine class actually has almost all the methods of a nodejs [EventEmitter](https://nodejs.org/api/events.html#events_class_eventemitter) to interact with the upcomming events. Furthermore these methods exist:
+
+* `loadRecording(file: string)` - Loads a wave `file` that is then playable with `startPlayback()`. <sup>(1)</sup>
 * `startPlayback()` - Starts playback of the last recording or loaded file.
 * `stopPlayback()` - Stops playback.
 * `pausePlayback()` - Pauses playback.
-* `isPlaying(): boolean` - Return if playback is active.
+* `isPlaying(): boolean` - Returns if playback is active.
 * `startRecording()` - Starts recording.
 * `stopRecording()` - Stops recording.
 * `deleteRecording()` - Deletes the recording that is currently held in memory.
-* `saveRecording(file: string)` - Saves the recording to a wave `file`.
+* `saveRecording(file: string)` - Saves the recording to a wave `file`. <sup>(2)</sup>
 * `isRecording(): boolean` - Returns if recording is active.
 * `getRecordingSamples(): number` - Return the number of total samples.
 * `getPlaybackPosition(): number` - Returns the current sample index of the playback.
@@ -128,16 +125,22 @@ maxOutputChannels | number    | The maximum supported output channels for this d
 * `setOptions(options?: engineOptions)` - Sets the engine options.
 * `synchronize()` - Clears the internal buffer queues. If there for example is a large delay between the input and the output after initializing a new engine, calling `synchronize` could potentially minimize this delay.
 
+***Notes:***<br>
+*(1) Currently only 32bit floating point waves with the same samplerate of the current engine can be loaded (and the header will not be checked).*<br>
+*(2) The wave files are 32bit floating point.*
+
 ### Engine options
 
-Option          | Type      | Default               | Description
-----------------|-----------|-----------------------|------------
-sampleRate      | number    | 44100                 | Samples per second for each channel.
-bufferSize      | number    | 1024                  | The count of samples for each processing iteration.
-inputChannels   | number    | 1                     | The number of input channels.
-outputChannels  | number    | 1                     | The number of output channels (should equal inputChannels).
-inputDevice     | number    | default input device  | The id of the input device to use.
-outputDevice    | number    | default output device | The id of the output device to use.
+Option          | Type      | Default                     | Description
+----------------|-----------|-----------------------------|------------
+sampleRate      | number    | 44100                       | Samples per second for each channel.
+bufferSize      | number    | 1024                        | The count of samples for each processing iteration.
+inputChannels   | number    | 1                           | The number of input channels.
+outputChannels  | number    | 1                           | The number of output channels (should equal inputChannels).
+inputDevice     | number    | default input device        | The id of the input device to use.
+outputDevice    | number    | default output device       | The id of the output device to use.
+inputLatency    | number    | default high input latency  | [See PortAudio docs](http://www.portaudio.com/docs/latency.html)
+outputLatency   | number    | default high output latency | [See PortAudio docs](http://www.portaudio.com/docs/latency.html)
 
 ## Beep options
 

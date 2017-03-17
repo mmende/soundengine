@@ -6,6 +6,8 @@ declare namespace soundengine {
 		outputChannels?: number
 		inputDevice?: number
 		outputDevice?: number
+		inputLatency?: number
+		outputLatency?: number
 		fftWindowSize?: number
 		fftOverlapSize?: number
 		fftWindowFunction?: string
