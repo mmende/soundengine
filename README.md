@@ -137,8 +137,8 @@ sampleRate      | number    | 44100                       | Samples per second f
 bufferSize      | number    | 1024                        | The count of samples for each processing iteration.
 inputChannels   | number    | 1                           | The number of input channels.
 outputChannels  | number    | 1                           | The number of output channels (should equal inputChannels).
-inputDevice     | number    | default input device        | The id of the input device to use.
-outputDevice    | number    | default output device       | The id of the output device to use.
+inputDevice     | number    | default input device        | The id of the input device to use or -1 for a output only stream.
+outputDevice    | number    | default output device       | The id of the output device to use or -1 for a input only stream.
 inputLatency    | number    | default high input latency  | [See PortAudio docs](http://www.portaudio.com/docs/latency.html)
 outputLatency   | number    | default high output latency | [See PortAudio docs](http://www.portaudio.com/docs/latency.html)
 

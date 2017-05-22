@@ -832,7 +832,13 @@ int Sound::Engine::_streamCallback(
 
 	// Enqueue the new inputBuffer
 	float* inCopy = new float[samplesCount];
-	memcpy(inCopy, inputBuffer, sizeof(float) * samplesCount);
+
+	// input can be NULL for output only streams
+	if (input != NULL)
+		memcpy(inCopy, inputBuffer, sizeof(float) * samplesCount);
+	else
+		for (int i = 0; i < samplesCount; ++i) inCopy[i] = 0.0;
+
 	engine->inBufferQueue->enqueue(inCopy);
 
 	// Dequeue an outputBuffer from the queue if available
@@ -842,8 +848,12 @@ int Sound::Engine::_streamCallback(
 		printf("Underflow detected...\n");
 		return 0;
 	}
-	for (int i = 0; i < engine->bufferSize; ++i)
-		outputBuffer[i] = outCopy[i];
+
+	// output could be NULL for input only streams
+	if (output != NULL)
+		for (int i = 0; i < engine->bufferSize; ++i)
+			outputBuffer[i] = outCopy[i];
+
 	delete[] outCopy;
 	return 0;
 }
@@ -870,23 +880,37 @@ void Sound::Engine::_stopBeep(uv_timer_t *handle) {
 void Sound::Engine::_configureStream() {
 	PaError paErr;
 
-	// Apply the options
-	inputParameters.device = inputDevice;
-	inputParameters.channelCount = inputChannels;
-	inputParameters.sampleFormat = paFloat32;
-	inputParameters.suggestedLatency = inputLatency < 0 ? Pa_GetDeviceInfo(inputDevice)->defaultHighInputLatency : inputLatency;
-	inputParameters.hostApiSpecificStreamInfo = NULL;
-	outputParameters.device = outputDevice;
-	outputParameters.channelCount = outputChannels;
-	outputParameters.sampleFormat = paFloat32;
-	outputParameters.suggestedLatency = outputLatency < 0 ? Pa_GetDeviceInfo(outputDevice)->defaultHighOutputLatency : outputLatency;
-	outputParameters.hostApiSpecificStreamInfo = NULL;
+	PaStreamParameters* inParams = NULL;
+	if (inputDevice != -1) {
+		inputParameters.device = inputDevice;
+		inputParameters.channelCount = inputChannels;
+		inputParameters.sampleFormat = paFloat32;
+		inputParameters.suggestedLatency = inputLatency < 0 ? Pa_GetDeviceInfo(inputDevice)->defaultHighInputLatency : inputLatency;
+		inputParameters.hostApiSpecificStreamInfo = NULL;
+		inParams = &inputParameters;
+		//printf("Config with valid input stream %p\n", inParams);
+	} else {
+		//printf("Config with output only stream %p\n", inParams);
+	}
+
+	PaStreamParameters* outParams = NULL;
+	if (outputDevice != -1) {
+		outputParameters.device = outputDevice;
+		outputParameters.channelCount = outputChannels;
+		outputParameters.sampleFormat = paFloat32;
+		outputParameters.suggestedLatency = outputLatency < 0 ? Pa_GetDeviceInfo(outputDevice)->defaultHighOutputLatency : outputLatency;
+		outputParameters.hostApiSpecificStreamInfo = NULL;
+		outParams = &outputParameters;
+		//printf("Config with valid output stream %p\n", outParams);
+	} else {
+		//printf("Config with input only stream %p\n", outParams);
+	}
 
 	// Open the stream with the specified parameters
 	paErr = Pa_OpenStream(
 		&stream,
-		&inputParameters,
-		&outputParameters,
+		inParams,
+		outParams,
 		sampleRate,
 		bufferSize,
 		paClipOff,
@@ -917,20 +941,21 @@ void Sound::Engine::_startStream() {
 }
 
 void Sound::Engine::_stopStream() {
-	// Stop processing
-	uv_timer_stop(&processing_timer);
 
 	PaError paErr = Pa_IsStreamStopped(stream);
 	if (paErr == 1) {
 		//printf("Stream already stopped...\n");
 		return;
+	} else {
+		paErr = Pa_StopStream(stream);
+		if (paErr != paNoError) {
+			Nan::ThrowError(Pa_GetErrorText(paErr));
+			return;
+		}
 	}
 
-	paErr = Pa_StopStream(stream);
-	if (paErr != paNoError) {
-		Nan::ThrowError(Pa_GetErrorText(paErr));
-		return;
-	}
+	// Stop processing
+	uv_timer_stop(&processing_timer);
 
 	// Clear queues
 	while(inBufferQueue->pop());
