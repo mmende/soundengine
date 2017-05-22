@@ -639,9 +639,14 @@ void Sound::Engine::GetOptions(const Nan::FunctionCallbackInfo<v8::Value>& info)
 	Nan::Set(options, Nan::New<String>("inputDevice").ToLocalChecked(), Nan::New<Integer>(engine->inputDevice));
 	Nan::Set(options, Nan::New<String>("outputDevice").ToLocalChecked(), Nan::New<Integer>(engine->outputDevice));
 
-	double _inputLatency = engine->inputLatency < 0 ? Pa_GetDeviceInfo(engine->inputDevice)->defaultHighInputLatency : engine->inputLatency;
+	double _inputLatency = 0.0;
+	if (engine->inputDevice != -1)
+		_inputLatency = engine->inputLatency < 0 ? Pa_GetDeviceInfo(engine->inputDevice)->defaultHighInputLatency : engine->inputLatency;
 	Nan::Set(options, Nan::New<String>("inputLatency").ToLocalChecked(), Nan::New<Number>(_inputLatency));
-	double _outputLatency = engine->outputLatency < 0 ? Pa_GetDeviceInfo(engine->outputDevice)->defaultHighInputLatency : engine->outputLatency;
+	
+	double _outputLatency = 0.0;
+	if (engine->outputDevice != -1)
+		_outputLatency = engine->outputLatency < 0 ? Pa_GetDeviceInfo(engine->outputDevice)->defaultHighInputLatency : engine->outputLatency;
 	Nan::Set(options, Nan::New<String>("outputLatency").ToLocalChecked(), Nan::New<Number>(_outputLatency));
 
 	Nan::Set(options, Nan::New<String>("fftWindowSize").ToLocalChecked(), Nan::New<Integer>(engine->fftWindowSize));
